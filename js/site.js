@@ -52,7 +52,7 @@
   // ---------- 머리글 ----------
   const header = () => {
     const navItems = MENU.map((m) =>
-      `<li><a href="${m.href}"${page === m.key || (page === "test" && m.key === "about") ? ' class="is-active"' : ""}>${m.label}</a></li>`
+      `<li><a href="${m.href}"${page === m.key || ((page === "test" || page === "roadmap") && m.key === "about") ? ' class="is-active"' : ""}>${m.label}</a></li>`
     ).join("");
     const cols = MENU.map((m) => `
       <div class="mega-col">
