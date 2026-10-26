@@ -12,7 +12,7 @@
       ["인사말", "about.html#greeting"],
       ["입학테스트", "test.html"],
       ["학원시스템", "about.html#system"],
-      ["입시로드맵", "about.html#roadmap"]
+      ["입시로드맵", "roadmap.html"]
     ]},
     { key: "elementary", label: "초등부", href: "elementary.html", items: [
       ["정규프로그램", "elementary.html#regular"],
@@ -52,7 +52,7 @@
   // ---------- 머리글 ----------
   const header = () => {
     const navItems = MENU.map((m) =>
-      `<li><a href="${m.href}"${page === m.key || (page === "test" && m.key === "about") ? ' class="is-active"' : ""}>${m.label}</a></li>`
+      `<li><a href="${m.href}"${page === m.key || ((page === "test" || page === "roadmap") && m.key === "about") ? ' class="is-active"' : ""}>${m.label}</a></li>`
     ).join("");
     const cols = MENU.map((m) => `
       <div class="mega-col">
