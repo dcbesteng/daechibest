@@ -14,12 +14,28 @@ high.html         고등부 (정규 · 내신 · 시간표 · 관리시스템)
 info.html         입시정보 (교육정보 · 설명회 소식 · 성공 후기 · FAQ)
 privacy.html      개인정보처리방침
 css/site.css      전체 스타일
-js/config.js      전화번호 · 주소 · 운영시간 · 공지 · 폼 전송 설정  ← 가장 자주 고치는 파일
-js/site.js        머리글(메가 메뉴) · 바닥글 · 모바일 메뉴 · 신청 폼 동작
+js/config.js      전화번호 · 주소 · 운영시간 · 공지 · 폼 전송 기본값 (관리자 설정이 있으면 그것이 우선)
+js/site.js        머리글(메가 메뉴) · 바닥글 · 모바일 메뉴 · 신청 폼 동작 · 저장된 데이터 적용
+js/admin.js       관리자 모드 (화면 편집 · 설정 · 비밀번호 변경)
+data/site.json    관리자 모드로 저장한 문구·설정·비밀번호 해시
 img/logo.svg      임시 로고 (실제 로고로 교체)
 ```
 
 머리글과 바닥글은 `js/site.js`가 모든 페이지에 자동으로 넣습니다. 메뉴 이름이나 순서를 바꾸려면 `js/site.js` 맨 위의 `MENU` 배열만 고치면 됩니다.
+
+## 0. 관리자 모드로 수정하기 (가장 쉬운 방법)
+
+홈페이지 맨 아래 작은 **관리자** 글자를 누르거나, 주소 뒤에 `?admin`을 붙여 엽니다. (예: `https://dcbesteng.github.io/daechibest/?admin`)
+
+1. **비밀번호** 입력 (처음 비밀번호는 `best2026` — 로그인 후 반드시 "비밀번호 변경"으로 바꾸세요)
+2. **GitHub 토큰** 입력 — 이 브라우저에서 처음 한 번만. 만드는 법은 로그인 창의 "토큰 만드는 방법"에 있습니다.
+   - github.com → 프로필 → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token
+   - Repository access: *Only select repositories → daechibest* / Permissions: *Contents → Read and write*
+3. 화면의 글자를 클릭해 바로 고칩니다. 링크 주소는 **더블클릭**, 표·목록 항목은 **＋ / ✕** 버튼으로 추가·삭제.
+4. 아래 **저장하기** → 1~2분 뒤 사이트에 반영됩니다.
+5. **설정** 버튼에서 전화번호·주소·운영시간·상단 공지·로고·신청 폼 주소를 바꿉니다.
+
+수정한 내용은 `data/site.json`에 저장되며, HTML 파일은 그대로 둡니다. 비밀번호는 해시로만 저장되고, 토큰은 관리자 브라우저에만 남습니다(공개되지 않음).
 
 ## 1. 먼저 채울 것
 

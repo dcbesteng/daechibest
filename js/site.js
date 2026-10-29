@@ -2,9 +2,50 @@
 // 대치베스트어학원 — 공통 스크립트
 // 머리글(메가 메뉴) · 바닥글 · 설정값 채우기 · 신청 폼
 // ============================================================
-(() => {
-  const S = window.SITE || {};
+(async () => {
   const page = document.body.dataset.page || "home";
+
+  // ---------- 저장된 데이터(data/site.json) 불러오기 ----------
+  // 관리자 모드에서 저장한 설정·문구가 들어 있습니다. 없으면 HTML에 적힌 기본값을 그대로 씁니다.
+  window.SITE_DEFAULTS = Object.assign({}, window.SITE || {});
+  let DATA = { v: 1, updatedAt: 0, auth: null, settings: {}, content: {}, lists: {} };
+  try {
+    let local = null;
+    try { local = JSON.parse(localStorage.getItem("dcbest_site_data") || "null"); } catch (e) {}
+    let remote = null;
+    try {
+      const res = await fetch(`data/site.json?t=${Date.now()}`, { cache: "no-store" });
+      if (res.ok) remote = await res.json();
+    } catch (e) {}
+    if (remote && local && (local.updatedAt || 0) > (remote.updatedAt || 0)) DATA = local;
+    else DATA = remote || local || DATA;
+    DATA.settings = DATA.settings || {}; DATA.content = DATA.content || {}; DATA.lists = DATA.lists || {};
+  } catch (e) {}
+  window.SITE_DATA = DATA;
+  const S = Object.assign({}, window.SITE || {}, DATA.settings || {});
+  window.SITE = S;
+
+  // 저장된 HTML을 안전하게 적용 (script 등 제거)
+  const sanitize = (html) => {
+    const doc = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
+    doc.querySelectorAll("script,style,iframe,object,embed,link,meta").forEach((n) => n.remove());
+    doc.querySelectorAll("*").forEach((n) => {
+      [...n.attributes].forEach((a) => {
+        if (/^on/i.test(a.name) || a.name === "contenteditable" || a.name === "data-adm-open") n.removeAttribute(a.name);
+        if ((a.name === "href" || a.name === "src") && /^\s*javascript:/i.test(a.value)) n.removeAttribute(a.name);
+      });
+      if (n.classList.contains("adm-ctl")) n.remove();
+    });
+    return doc.body.innerHTML;
+  };
+  Object.entries(DATA.lists).forEach(([key, items]) => {
+    const list = document.querySelector(`[data-list="${key}"]`);
+    if (list && Array.isArray(items)) list.innerHTML = items.map(sanitize).join("");
+  });
+  Object.entries(DATA.content).forEach(([key, html]) => {
+    const el = document.querySelector(`[data-edit="${key}"]`);
+    if (el && !el.closest("[data-list]")) el.innerHTML = sanitize(html);
+  });
 
   // 메뉴 구조: 상위 5개 · 하위 20개
   const MENU = [
@@ -64,7 +105,7 @@
     <header class="site-header" id="siteHeader">
       <div class="header-inner">
         <a class="brand" href="index.html">
-          <img src="img/logo.svg" alt="" width="36" height="36" />
+          <img src="${esc(S.logo || "img/logo.svg")}" alt="" width="36" height="36" />
           <span>${esc(S.name || "대치베스트어학원")}</span>
         </a>
         <ul class="nav" aria-label="주요 메뉴">${navItems}</ul>
@@ -186,6 +227,22 @@
       }
     });
   }
+
+  // ---------- 관리자 모드 (푸터 '관리자' 버튼 또는 주소 뒤 ?admin) ----------
+  const openAdmin = () => {
+    if (window.__ADMIN_LOADED) { if (window.__openAdmin) window.__openAdmin(); return; }
+    window.__ADMIN_LOADED = true; window.__ADMIN_OPEN = true;
+    const sc = document.createElement("script"); sc.src = "js/admin.js"; document.body.appendChild(sc);
+  };
+  const fb = document.querySelector(".site-footer .footer-bottom div");
+  if (fb) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "adm-link"; b.textContent = "관리자";
+    b.style.cssText = "font-size:12px;color:#6B7A94;cursor:pointer;background:none;border:0;padding:0;font:inherit";
+    b.addEventListener("click", openAdmin);
+    fb.appendChild(b);
+  }
+  if (new URLSearchParams(location.search).has("admin")) openAdmin();
 
   // 페이지 탭 활성 표시 (서브 페이지 내 앵커)
   const tabs = document.querySelectorAll(".page-tabs a");
