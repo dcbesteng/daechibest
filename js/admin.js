@@ -310,6 +310,8 @@
     $("#admSettings").addEventListener("click", settingsModal);
     $("#admPass").addEventListener("click", passwordModal);
     window.addEventListener("beforeunload", (e) => { if (editing && $("main").innerHTML !== snapshot) { e.preventDefault(); e.returnValue = ""; } });
+    // 초기 비밀번호를 아직 바꾸지 않았으면(이미 로그인된 상태로 들어온 경우 포함) 변경 창을 띄웁니다
+    if (data.auth && data.auth.mustChange && !$(".adm-modal")) setTimeout(() => { if (!$(".adm-modal")) passwordModal("아직 초기 비밀번호를 쓰고 있습니다. 안전한 비밀번호로 바꿔 주세요. 바꾸면 토큰이 암호화되어 어느 기기에서든 비밀번호만으로 편집할 수 있습니다."); }, 400);
   };
 
   const status = (msg, isErr) => { const s = $("#admStatus"); if (s) { s.textContent = msg; s.style.color = isErr ? "#FFB4A8" : "#C5CFDF"; } };
