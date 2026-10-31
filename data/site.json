@@ -4,7 +4,8 @@
   "auth": {
     "salt": "ee30a9c8cbc398485e816d5b89a4fde5",
     "iter": 100000,
-    "hash": "0b88240c0bcb43c9f08285f573e9e3c610701ee385a3ef91e7f69be436143eb9"
+    "hash": "0b88240c0bcb43c9f08285f573e9e3c610701ee385a3ef91e7f69be436143eb9",
+    "mustChange": true
   },
   "settings": {},
   "content": {},

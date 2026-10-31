@@ -30,6 +30,26 @@
     const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: fromHex(saltHex), iterations: iter }, key, 256);
     return toHex(bits);
   };
+  // 토큰 암호화: 비밀번호에서 AES 키를 만들어 토큰을 잠그고(seal) 풉니다(open). 잠긴 토큰은 site.json에 저장됩니다.
+  const aesKey = async (password, saltHex) => {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", hash: "SHA-256", salt: fromHex(saltHex), iterations: 150000 }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  };
+  const sealToken = async (token, password) => {
+    const salt = toHex(crypto.getRandomValues(new Uint8Array(16)).buffer);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await aesKey(password, salt);
+    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(token));
+    return { salt, iv: toHex(iv.buffer), data: toHex(ct) };
+  };
+  const openToken = async (sealed, password) => {
+    try {
+      const key = await aesKey(password, sealed.salt);
+      const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromHex(sealed.iv) }, key, fromHex(sealed.data));
+      return new TextDecoder().decode(pt);
+    } catch (e) { return ""; }
+  };
+  const strongEnough = (pw) => pw.length >= 12 && /[A-Za-z]/.test(pw) && /[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
   const b64utf8 = (s) => btoa(unescape(encodeURIComponent(s)));
   const utf8b64 = (s) => decodeURIComponent(escape(atob(s.replace(/\n/g, ""))));
   const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; } };
@@ -130,13 +150,13 @@
 
   // ---------- 로그인 ----------
   const loginModal = () => {
-    const needToken = !getToken();
+    const needToken = !getToken() && !(data.auth && data.auth.sealed);
     const m = modal(`
       <h3>관리자 로그인</h3>
       <p>이 화면에서 바로 문구를 고치고 저장하면 사이트에 반영됩니다.</p>
       <label>비밀번호</label><input type="password" id="admPw" autocomplete="current-password">
       ${needToken ? `
-      <label>GitHub 토큰 <span style="font-weight:400;color:#64708A">(이 브라우저에 한 번만 저장)</span></label>
+      <label>GitHub 토큰 <span style="font-weight:400;color:#64708A">(처음 한 번만. 비밀번호로 암호화해 보관합니다)</span></label>
       <input type="password" id="admToken" placeholder="github_pat_…">
       <details><summary>토큰 만드는 방법</summary>
         <ol>
@@ -158,15 +178,35 @@
         if (!data.auth) throw new Error("관리자 설정이 없습니다. data/site.json을 확인해 주세요.");
         const h = await pbkdf2(pw.value, data.auth.salt, data.auth.iter);
         if (h !== data.auth.hash) throw new Error("비밀번호가 맞지 않습니다.");
+        let justEntered = false;
         if (needToken) {
           const t = $("#admToken", m).value.trim();
           if (!t) throw new Error("GitHub 토큰을 입력해 주세요.");
           setToken(t);
           try { await gh("GET", DATA_PATH); } catch (e) { setToken(""); throw e; }
+          justEntered = true;
+        } else if (!getToken() && data.auth.sealed) {
+          // 다른 기기: 사이트에 보관된 암호화 토큰을 비밀번호로 풉니다
+          const t = await openToken(data.auth.sealed, pw.value);
+          if (!t) throw new Error("보관된 토큰을 풀 수 없습니다. 토큰을 다시 등록해 주세요(비밀번호 변경 → 토큰 다시 등록).");
+          setToken(t);
         }
         startSession();
         m.remove();
         enterEdit();
+        if (data.auth.mustChange || !strongEnough(pw.value)) {
+          // 초기·약한 비밀번호: 강한 비밀번호로 바꾸게 하고, 그때 토큰을 암호화해 보관
+          setTimeout(() => passwordModal("처음 로그인입니다. 안전한 비밀번호(12자 이상, 영문·숫자·기호)로 바꿔 주세요. 바꾸면 토큰이 암호화되어 어느 기기에서든 비밀번호만으로 편집할 수 있습니다.", pw.value), 300);
+        } else if (justEntered || !data.auth.sealed) {
+          // 강한 비밀번호 + 새 토큰: 바로 암호화해 보관
+          try {
+            const { json, sha } = await readData();
+            json.auth = Object.assign({}, json.auth || data.auth, { sealed: await sealToken(getToken(), pw.value) });
+            delete json.auth.mustChange;
+            await writeData(json, sha, "관리자: 토큰 보관");
+            status("토큰을 암호화해 보관했습니다. 이제 어느 기기에서든 비밀번호만으로 편집할 수 있습니다.");
+          } catch (e) { status("토큰 보관 실패: " + e.message, true); }
+        }
       } catch (e) { err.textContent = e.message; }
     };
     $("#admGo", m).addEventListener("click", go);
@@ -348,14 +388,14 @@
   };
 
   // ---------- 비밀번호 변경 ----------
-  const passwordModal = () => {
+  const passwordModal = (intro, oldPrefill) => {
     const m = modal(`
       <h3>비밀번호 변경</h3>
-      <p>관리자 비밀번호를 바꿉니다. 8자 이상, 영문·숫자를 섞어 주세요.</p>
-      <label>현재 비밀번호</label><input type="password" id="pwOld">
+      <p>${esc(intro || "관리자 비밀번호를 바꿉니다.")} <b>12자 이상, 영문·숫자·기호</b>를 섞어 주세요. 바꾸면 보관된 토큰도 새 비밀번호로 다시 암호화됩니다.</p>
+      <label>현재 비밀번호</label><input type="password" id="pwOld" value="${esc(oldPrefill || "")}">
       <label>새 비밀번호</label><input type="password" id="pwNew">
       <label>새 비밀번호 확인</label><input type="password" id="pwNew2">
-      <details><summary>GitHub 토큰 다시 등록</summary><label>새 토큰</label><input type="password" id="pwToken" placeholder="비워 두면 기존 토큰 유지"></details>
+      <details><summary>GitHub 토큰 다시 등록</summary><label>새 토큰</label><input type="password" id="pwToken" placeholder="비워 두면 기존 토큰 유지"><div class="hint">토큰만 바꿀 때는 현재 비밀번호만 입력하고 새 비밀번호 칸은 비워 두세요.</div></details>
       <div class="err" id="pwErr"></div>
       <div class="row"><button type="button" id="pwCancel">취소</button><button type="button" class="primary" id="pwSave">변경</button></div>
     `);
@@ -367,17 +407,24 @@
         if (tk) setToken(tk);
         if (nw || nw2) {
           if ((await pbkdf2(old, data.auth.salt, data.auth.iter)) !== data.auth.hash) throw new Error("현재 비밀번호가 맞지 않습니다.");
-          if (nw.length < 8) throw new Error("새 비밀번호는 8자 이상이어야 합니다.");
+          if (!strongEnough(nw)) throw new Error("새 비밀번호는 12자 이상이고 영문·숫자·기호를 모두 포함해야 합니다.");
           if (nw !== nw2) throw new Error("새 비밀번호가 서로 다릅니다.");
           const salt = toHex(crypto.getRandomValues(new Uint8Array(16)).buffer);
           const iter = 100000;
           const hash = await pbkdf2(nw, salt, iter);
           const { json, sha } = await readData();
-          json.auth = { salt, iter, hash };
+          json.auth = { salt, iter, hash, sealed: await sealToken(getToken(), nw) };
           await writeData(json, sha, "관리자: 비밀번호 변경");
+        } else if (tk) {
+          // 토큰만 다시 등록: 현재 비밀번호로 암호화해 보관
+          if ((await pbkdf2(old, data.auth.salt, data.auth.iter)) !== data.auth.hash) throw new Error("현재 비밀번호가 맞지 않습니다.");
+          const { json, sha } = await readData();
+          json.auth = Object.assign({}, json.auth || data.auth, { sealed: await sealToken(tk, old) });
+          delete json.auth.mustChange;
+          await writeData(json, sha, "관리자: 토큰 다시 등록");
         }
         m.remove();
-        status(nw ? "비밀번호를 변경했습니다. 다음 로그인부터 새 비밀번호를 쓰세요." : "토큰을 등록했습니다.");
+        status(nw ? "비밀번호를 변경하고 토큰을 암호화해 보관했습니다. 이제 어느 기기에서든 비밀번호만으로 편집할 수 있습니다." : "토큰을 등록했습니다.");
       } catch (e) { err.textContent = e.message; }
     });
   };
