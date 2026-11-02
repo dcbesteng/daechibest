@@ -1,10 +1,15 @@
 {
   "v": 1,
-  "updatedAt": 1793408740966,
+  "updatedAt": 1793592518139,
   "auth": {
     "salt": "a72ffd0bb37d65139eb13a06efbd433a",
     "iter": 100000,
-    "hash": "f3e0da2946815cb4d083406fd1222ee99051804838c9b4392ee9d5c2d527e37a"
+    "hash": "f3e0da2946815cb4d083406fd1222ee99051804838c9b4392ee9d5c2d527e37a",
+    "sealed": {
+      "salt": "3868a8dce84e47ff822725226585b433",
+      "iv": "7493eaadd8f1dfe002105674",
+      "data": "6d5413693a57167da6cfb771b11a80edf516bb258d424e8b2d5c76d02587b46b157cf96b195e6e424b1a05f8d73b4c298c6c664ffece58de5c7dd2a4e693d5cf76400c514f5a6171d5f886178014e9d7e091548f855a007a2ed562777ce80d8149ab18a8185dd63996c1d8b5df"
+    }
   },
   "settings": {},
   "content": {
