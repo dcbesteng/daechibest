@@ -232,7 +232,7 @@
   const openAdmin = () => {
     if (window.__ADMIN_LOADED) { if (window.__openAdmin) window.__openAdmin(); return; }
     window.__ADMIN_LOADED = true; window.__ADMIN_OPEN = true;
-    const sc = document.createElement("script"); sc.src = "js/admin.js"; document.body.appendChild(sc);
+    const sc = document.createElement("script"); sc.src = "js/admin.js?v=" + Date.now(); document.body.appendChild(sc);
   };
   const fb = document.querySelector(".site-footer .footer-bottom div");
   if (fb) {
