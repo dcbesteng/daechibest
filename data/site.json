@@ -83,11 +83,6 @@
     "index.applyForm.8": "입학테스트 신청하기"
   },
   "lists": {
-    "index.top.l7": [
-      "<div><b>[00]년</b><span>대치동 운영 경력</span></div>",
-      "<div><b>[00]개교</b><span>학교별 내신 대비</span></div>",
-      "<div><b>[00]%</b><span>한 학기 내 등급 상승</span></div>"
-    ],
     "index.about.l8": [
       "<a class=\"card card--link\" href=\"about.html#greeting\">\n<span class=\"icon-box\"><svg fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.8\" viewBox=\"0 0 24 24\"><path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"></path></svg></span>\n<h3>인사말</h3>\n<p>원장 인사말과 교육 철학. 왜 \"암기하고 시험 보는\" 방식을 고집하는지 설명합니다.</p>\n<span class=\"more\">자세히 보기 →</span>\n</a>",
       "<a class=\"card card--link\" href=\"test.html\">\n<span class=\"icon-box icon-box--amber\"><svg fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.8\" viewBox=\"0 0 24 24\"><path d=\"M9 11l3 3L22 4\"></path><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11\"></path></svg></span>\n<h3>입학테스트</h3>\n<p>학년별 테스트 구성, 소요 시간, 결과 상담 절차와 반 배정 기준. 온라인으로 신청합니다.</p>\n<span class=\"more\">신청하기 →</span>\n</a>",
